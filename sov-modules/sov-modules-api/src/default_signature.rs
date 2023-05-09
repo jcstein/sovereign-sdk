@@ -1,27 +1,26 @@
 use crate::{SigVerificationError, Signature};
 use borsh::{BorshDeserialize, BorshSerialize};
 use ed25519_dalek::ed25519::signature::Signature as DalekSignatureTrait;
-use ed25519_dalek::Verifier;
-use ed25519_dalek::{PublicKey as DalekPublicKey, Signature as DalekSignature};
+use ed25519_dalek::{PublicKey as DalekPublicKey, Signature as DalekSignature, Verifier};
 
-// TODO feature gate it in Cargo.toml
 #[cfg(feature = "native")]
 pub mod private_key {
     use super::{DefaultPublicKey, DefaultSignature};
     use ed25519_dalek::{Keypair, Signer};
-    use rand::{CryptoRng, RngCore};
+
+    // TODO feature gate it in Cargo.toml
+    use rand::{rngs::OsRng, CryptoRng, RngCore};
 
     pub struct DefaultPrivateKey {
         key_pair: Keypair,
     }
 
     impl DefaultPrivateKey {
-        pub fn generate<R>(csprng: &mut R) -> Self
-        where
-            R: CryptoRng + RngCore,
-        {
+        pub fn generate() -> Self {
+            let mut csprng = OsRng;
+
             Self {
-                key_pair: Keypair::generate(csprng),
+                key_pair: Keypair::generate(&mut csprng),
             }
         }
 
@@ -46,26 +45,19 @@ pub struct DefaultPublicKey {
 
 impl BorshDeserialize for DefaultPublicKey {
     fn deserialize_reader<R: std::io::Read>(reader: &mut R) -> std::io::Result<Self> {
-        todo!()
+        let v = &mut vec![];
+        //reader.read_exact(buf)
+        reader.read_to_end(v).unwrap();
+
+        Ok(DefaultPublicKey {
+            pub_key: DalekPublicKey::from_bytes(v).unwrap(),
+        })
     }
 }
 
 impl BorshSerialize for DefaultPublicKey {
     fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
         writer.write_all(self.pub_key.as_bytes())
-    }
-}
-
-impl DefaultPublicKey {
-    pub fn new(pub_key: Vec<u8>) -> Self {
-        //Self { pub_key }
-        todo!()
-    }
-}
-
-impl<T: AsRef<str>> From<T> for DefaultPublicKey {
-    fn from(key: T) -> Self {
-        todo!()
     }
 }
 
