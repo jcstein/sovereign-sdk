@@ -2,27 +2,39 @@ use crate::{SigVerificationError, Signature};
 use borsh::{BorshDeserialize, BorshSerialize};
 use ed25519_dalek::ed25519::signature::Signature as DalekSignatureTrait;
 use ed25519_dalek::Verifier;
-use ed25519_dalek::{Keypair, PublicKey as DalekPublicKey, Signature as DalekSignature, Signer};
+use ed25519_dalek::{PublicKey as DalekPublicKey, Signature as DalekSignature};
 
-use rand::{CryptoRng, RngCore};
+// TODO feature gate it in Cargo.toml
+#[cfg(feature = "native")]
+pub mod private_key {
+    use super::{DefaultPublicKey, DefaultSignature};
+    use ed25519_dalek::{Keypair, Signer};
+    use rand::{CryptoRng, RngCore};
 
-pub struct DefaultPrivateKey {
-    key_pair: Keypair,
-}
-
-impl DefaultPrivateKey {
-    pub fn generate<R>(csprng: &mut R) -> Self
-    where
-        R: CryptoRng + RngCore,
-    {
-        Self {
-            key_pair: Keypair::generate(csprng),
-        }
+    pub struct DefaultPrivateKey {
+        key_pair: Keypair,
     }
 
-    pub fn sign(&self, msg: [u8; 32]) -> DefaultSignature {
-        DefaultSignature {
-            msg_sig: self.key_pair.sign(&msg),
+    impl DefaultPrivateKey {
+        pub fn generate<R>(csprng: &mut R) -> Self
+        where
+            R: CryptoRng + RngCore,
+        {
+            Self {
+                key_pair: Keypair::generate(csprng),
+            }
+        }
+
+        pub fn sign(&self, msg: [u8; 32]) -> DefaultSignature {
+            DefaultSignature {
+                msg_sig: self.key_pair.sign(&msg),
+            }
+        }
+
+        pub fn pub_key(&self) -> DefaultPublicKey {
+            DefaultPublicKey {
+                pub_key: self.key_pair.public,
+            }
         }
     }
 }
@@ -53,8 +65,6 @@ impl DefaultPublicKey {
 
 impl<T: AsRef<str>> From<T> for DefaultPublicKey {
     fn from(key: T) -> Self {
-        let key = key.as_ref().as_bytes().to_vec();
-        //Self { pub_key: key }
         todo!()
     }
 }
