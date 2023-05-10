@@ -22,7 +22,6 @@ pub fn query_and_deserialize<R: DeserializeOwned>(
 
 pub fn generate_address(key: &str) -> <C as Spec>::Address {
     let hash = <C as Spec>::Hasher::hash(key.as_bytes());
-
     Address::from(hash)
 }
 
