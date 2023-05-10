@@ -33,7 +33,7 @@ pub struct ValueSetter<C: sov_modules_api::Context> {
 impl<C: sov_modules_api::Context> sov_modules_api::Module for ValueSetter<C> {
     type Context = C;
 
-    type Config = C::PublicKey;
+    type Config = C::Address;
 
     type CallMessage = call::CallMessage;
 
