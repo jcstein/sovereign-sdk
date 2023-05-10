@@ -46,7 +46,7 @@ pub struct Election<C: sov_modules_api::Context> {
 impl<C: sov_modules_api::Context> sov_modules_api::Module for Election<C> {
     type Context = C;
 
-    type Config = C::PublicKey;
+    type Config = C::Address;
 
     type CallMessage = call::CallMessage<C>;
 

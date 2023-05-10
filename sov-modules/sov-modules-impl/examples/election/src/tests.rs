@@ -4,6 +4,7 @@ use super::{
     types::Candidate,
     Election,
 };
+use sov_modules_api::Address;
 
 use sov_modules_api::{
     default_context::{DefaultContext, ZkDefaultContext},
@@ -14,25 +15,26 @@ use sov_state::{ProverStorage, WorkingSet, ZkStorage};
 
 #[test]
 fn test_election() {
+    let admin = Address::from([1; 32]);
+
     let native_storage = ProverStorage::temporary();
     let mut native_working_set = WorkingSet::new(native_storage);
-    test_module::<DefaultContext>(&mut native_working_set);
+
+    test_module::<DefaultContext>(admin.clone(), &mut native_working_set);
 
     let (_log, witness) = native_working_set.freeze();
     let zk_storage = ZkStorage::new([0u8; 32]);
     let mut zk_working_set = WorkingSet::with_witness(zk_storage, witness);
-    test_module::<ZkDefaultContext>(&mut zk_working_set);
+    test_module::<ZkDefaultContext>(admin, &mut zk_working_set);
 }
 
-fn test_module<C: Context<PublicKey = DefaultPublicKey>>(working_set: &mut WorkingSet<C::Storage>) {
-    let admin_pub_key = DefaultPrivateKey::generate().pub_key();
-
-    let admin_context = C::new(admin_pub_key.to_address());
+fn test_module<C: Context>(admin: C::Address, working_set: &mut WorkingSet<C::Storage>) {
+    let admin_context = C::new(admin.clone());
     let election = &mut Election::<C>::new();
 
     // Init module
     {
-        election.genesis(&admin_pub_key, working_set).unwrap();
+        election.genesis(&admin, working_set).unwrap();
     }
 
     // Send candidates
