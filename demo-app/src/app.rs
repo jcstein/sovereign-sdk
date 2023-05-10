@@ -9,7 +9,7 @@ use sov_modules_api::default_context::ZkDefaultContext;
 #[cfg(feature = "native")]
 use sov_modules_api::Address;
 use sov_modules_api::Context;
-#[cfg(test)]
+//#[cfg(test)]
 use sov_modules_api::{PublicKey, Spec};
 #[cfg(feature = "native")]
 use sov_state::ProverStorage;
@@ -21,8 +21,12 @@ use sovereign_sdk::stf::{StateTransitionRunner, ZkConfig};
 #[cfg(test)]
 use std::path::Path;
 
-#[cfg(test)]
+use sov_modules_api::Hasher;
+
+//#[cfg(test)]
 pub(crate) type C = DefaultContext;
+
+use sov_modules_api::default_signature::private_key::DefaultPrivateKey;
 
 pub struct DemoAppRunner<C: Context>(pub DemoApp<C>);
 
@@ -102,6 +106,7 @@ pub fn create_demo_genesis_config<C: Context>(
     sequencer_address: C::Address,
     sequencer_da_address: Vec<u8>,
 ) -> GenesisConfig<C> {
+    /*
     let token_config: bank::TokenConfig<C> = bank::TokenConfig {
         token_name: "sov-test-token".to_owned(),
         address_and_balances: vec![(sequencer_address.clone(), 10_000)],
@@ -128,7 +133,9 @@ pub fn create_demo_genesis_config<C: Context>(
         (),
         (),
         accounts::AccountConfig { pub_keys: vec![] },
-    )
+    )*/
+
+    todo!()
 }
 
 #[cfg(test)]
@@ -146,11 +153,16 @@ pub(crate) fn create_sequencer_config(
     }
 }
 
+pub fn generate_address(key: &str) -> <C as Spec>::Address {
+    let hash = <C as Spec>::Hasher::hash(key.as_bytes());
+    Address::from(hash)
+}
+
 #[cfg(test)]
-pub(crate) fn create_config(initial_sequencer_balance: u64) -> GenesisConfig<DefaultContext> {
-    type C = DefaultContext;
-    let pub_key = <C as Spec>::PublicKey::try_from(SEQ_PUB_KEY_STR).unwrap();
-    let seq_address = pub_key.to_address::<<C as Spec>::Address>();
+pub(crate) fn create_config(
+    initial_sequencer_balance: u64,
+) -> (GenesisConfig<DefaultContext>, DefaultPrivateKey) {
+    let seq_address = generate_address(SEQ_PUB_KEY_STR);
 
     let token_config: bank::TokenConfig<DefaultContext> = bank::TokenConfig {
         token_name: TOKEN_NAME.to_owned(),
@@ -169,12 +181,19 @@ pub(crate) fn create_config(initial_sequencer_balance: u64) -> GenesisConfig<Def
 
     let sequencer_config = create_sequencer_config(seq_address, token_address);
 
-    GenesisConfig::new(
-        sequencer_config,
-        bank_config,
-        (),
-        (),
-        accounts::AccountConfig { pub_keys: vec![] },
+    let admin_private_key = DefaultPrivateKey::generate();
+    let admin_pub_key = admin_private_key.pub_key();
+    let admin_pub_address: <C as Spec>::Address = admin_pub_key.to_address();
+
+    (
+        GenesisConfig::new(
+            sequencer_config,
+            bank_config,
+            admin_pub_address.clone(),
+            admin_pub_address,
+            accounts::AccountConfig { pub_keys: vec![] },
+        ),
+        admin_private_key,
     )
 }
 

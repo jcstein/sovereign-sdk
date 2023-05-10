@@ -3,6 +3,8 @@ use borsh::{BorshDeserialize, BorshSerialize};
 use ed25519_dalek::ed25519::signature::Signature as DalekSignatureTrait;
 use ed25519_dalek::{PublicKey as DalekPublicKey, Signature as DalekSignature, Verifier};
 
+use ed25519_dalek::{PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH};
+
 #[cfg(feature = "native")]
 pub mod private_key {
     use super::{DefaultPublicKey, DefaultSignature};
@@ -45,12 +47,11 @@ pub struct DefaultPublicKey {
 
 impl BorshDeserialize for DefaultPublicKey {
     fn deserialize_reader<R: std::io::Read>(reader: &mut R) -> std::io::Result<Self> {
-        let v = &mut vec![];
-        //reader.read_exact(buf)
-        reader.read_to_end(v).unwrap();
+        let mut buffer = [0; PUBLIC_KEY_LENGTH];
+        reader.read_exact(&mut buffer).unwrap();
 
-        Ok(DefaultPublicKey {
-            pub_key: DalekPublicKey::from_bytes(v).unwrap(),
+        Ok(Self {
+            pub_key: DalekPublicKey::from_bytes(&buffer).unwrap(),
         })
     }
 }
@@ -68,7 +69,12 @@ pub struct DefaultSignature {
 
 impl BorshDeserialize for DefaultSignature {
     fn deserialize_reader<R: std::io::Read>(reader: &mut R) -> std::io::Result<Self> {
-        todo!()
+        let mut buffer = [0; SIGNATURE_LENGTH];
+        reader.read_exact(&mut buffer).unwrap();
+
+        Ok(Self {
+            msg_sig: DalekSignature::from_bytes(&buffer).unwrap(),
+        })
     }
 }
 
