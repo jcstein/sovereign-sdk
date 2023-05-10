@@ -9,7 +9,7 @@ pub mod private_key {
     use ed25519_dalek::{Keypair, Signer};
 
     // TODO feature gate it in Cargo.toml
-    use rand::{rngs::OsRng, CryptoRng, RngCore};
+    use rand::rngs::OsRng;
 
     pub struct DefaultPrivateKey {
         key_pair: Keypair,
