@@ -45,14 +45,14 @@ pub mod test {
     #[test]
     fn test_demo_values_in_db() {
         let path = schemadb::temppath::TempPath::new();
-        let (config, admin_priv_key) = create_config(LOCKED_AMOUNT + 1);
+        let (config, value_setter_admin, election_admin) = create_config(LOCKED_AMOUNT + 1);
         {
             let mut demo = create_new_demo(&path);
 
             demo.init_chain(config);
             demo.begin_slot(Default::default());
 
-            let txs = simulate_da(admin_priv_key);
+            let txs = simulate_da(value_setter_admin, election_admin);
 
             let apply_blob_outcome = demo
                 .apply_blob(TestBlob::new(Batch { txs }, &SEQUENCER_DA_ADDRESS), None)
@@ -75,14 +75,13 @@ pub mod test {
                 storage.clone(),
             );
 
-            /*       assert_eq!(
+            assert_eq!(
                 resp,
                 election::query::GetResultResponse::Result(Some(election::Candidate {
                     name: "candidate_2".to_owned(),
                     count: 3
                 }))
             );
-            */
 
             let resp = query_and_deserialize::<value_setter::query::Response>(
                 runtime,

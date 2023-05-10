@@ -5,8 +5,8 @@ use sov_modules_api::{
 };
 
 fn value_setter_call_messages(
-    admin: &DefaultPrivateKey,
-) -> Vec<(&DefaultPrivateKey, value_setter::call::CallMessage, u64)> {
+    admin: Rc<DefaultPrivateKey>,
+) -> Vec<(Rc<DefaultPrivateKey>, value_setter::call::CallMessage, u64)> {
     let mut value_setter_admin_nonce = 0;
     let mut messages = Vec::default();
 
@@ -17,7 +17,7 @@ fn value_setter_call_messages(
     let new_value = 33;
     let set_value_msg_2 = value_setter::call::CallMessage::SetValue(new_value);
 
-    messages.push((admin, set_value_msg_1, value_setter_admin_nonce));
+    messages.push((admin.clone(), set_value_msg_1, value_setter_admin_nonce));
 
     value_setter_admin_nonce += 1;
     messages.push((admin, set_value_msg_2, value_setter_admin_nonce));
@@ -26,14 +26,14 @@ fn value_setter_call_messages(
 }
 
 pub struct ValueSetterMessages {
-    pub(crate) admin: DefaultPrivateKey,
+    pub(crate) admin: Rc<DefaultPrivateKey>,
 }
 
 impl MessageGenerator for ValueSetterMessages {
     type Call = value_setter::call::CallMessage;
 
-    fn create_messages(&self) -> Vec<(&DefaultPrivateKey, Self::Call, u64)> {
-        value_setter_call_messages(&self.admin)
+    fn create_messages(&self) -> Vec<(Rc<DefaultPrivateKey>, Self::Call, u64)> {
+        value_setter_call_messages(self.admin.clone())
     }
 
     fn create_tx(

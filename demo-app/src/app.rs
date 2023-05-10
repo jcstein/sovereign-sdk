@@ -21,12 +21,11 @@ use sovereign_sdk::stf::{StateTransitionRunner, ZkConfig};
 #[cfg(test)]
 use std::path::Path;
 
+use sov_modules_api::default_signature::private_key::DefaultPrivateKey;
 use sov_modules_api::Hasher;
 
 //#[cfg(test)]
 pub(crate) type C = DefaultContext;
-
-use sov_modules_api::default_signature::private_key::DefaultPrivateKey;
 
 pub struct DemoAppRunner<C: Context>(pub DemoApp<C>);
 
@@ -161,7 +160,11 @@ pub fn generate_address(key: &str) -> <C as Spec>::Address {
 #[cfg(test)]
 pub(crate) fn create_config(
     initial_sequencer_balance: u64,
-) -> (GenesisConfig<DefaultContext>, DefaultPrivateKey) {
+) -> (
+    GenesisConfig<DefaultContext>,
+    DefaultPrivateKey,
+    DefaultPrivateKey,
+) {
     let seq_address = generate_address(SEQ_PUB_KEY_STR);
 
     let token_config: bank::TokenConfig<DefaultContext> = bank::TokenConfig {
@@ -181,19 +184,24 @@ pub(crate) fn create_config(
 
     let sequencer_config = create_sequencer_config(seq_address, token_address);
 
-    let admin_private_key = DefaultPrivateKey::generate();
-    let admin_pub_key = admin_private_key.pub_key();
-    let admin_pub_address: <C as Spec>::Address = admin_pub_key.to_address();
+    let value_setter_admin_private_key = DefaultPrivateKey::generate();
+    let value_setter_admin_pub_key = value_setter_admin_private_key.pub_key();
+    let value_setter_admin_address: <C as Spec>::Address = value_setter_admin_pub_key.to_address();
+
+    let election_admin_private_key = DefaultPrivateKey::generate();
+    let election_admin_pub_key = election_admin_private_key.pub_key();
+    let election_admin_address: <C as Spec>::Address = election_admin_pub_key.to_address();
 
     (
         GenesisConfig::new(
             sequencer_config,
             bank_config,
-            admin_pub_address.clone(),
-            admin_pub_address,
+            election_admin_address,
+            value_setter_admin_address,
             accounts::AccountConfig { pub_keys: vec![] },
         ),
-        admin_private_key,
+        value_setter_admin_private_key,
+        election_admin_private_key,
     )
 }
 
