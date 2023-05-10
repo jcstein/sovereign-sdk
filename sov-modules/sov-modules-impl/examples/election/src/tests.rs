@@ -5,10 +5,9 @@ use super::{
     Election,
 };
 
-use anyhow::anyhow;
 use sov_modules_api::{
     default_context::{DefaultContext, ZkDefaultContext},
-    default_signature::DefaultPublicKey,
+    default_signature::{private_key::DefaultPrivateKey, DefaultPublicKey},
     Context, Module, ModuleInfo, PublicKey,
 };
 use sov_state::{ProverStorage, WorkingSet, ZkStorage};
@@ -26,16 +25,14 @@ fn test_election() {
 }
 
 fn test_module<C: Context<PublicKey = DefaultPublicKey>>(working_set: &mut WorkingSet<C::Storage>) {
-    let admin_pub_key = C::PublicKey::try_from("election_admin")
-        .map_err(|_| anyhow!("Admin initialization failed"))
-        .unwrap();
+    let admin_pub_key = DefaultPrivateKey::generate().pub_key();
 
     let admin_context = C::new(admin_pub_key.to_address());
     let election = &mut Election::<C>::new();
 
     // Init module
     {
-        election.genesis(&(), working_set).unwrap();
+        election.genesis(&admin_pub_key, working_set).unwrap();
     }
 
     // Send candidates
@@ -49,9 +46,17 @@ fn test_module<C: Context<PublicKey = DefaultPublicKey>>(working_set: &mut Worki
             .unwrap();
     }
 
-    let voter_1 = DefaultPublicKey::from("voter_1").to_address::<C::Address>();
-    let voter_2 = DefaultPublicKey::from("voter_2").to_address::<C::Address>();
-    let voter_3 = DefaultPublicKey::from("voter_3").to_address::<C::Address>();
+    let voter_1 = DefaultPrivateKey::generate()
+        .pub_key()
+        .to_address::<C::Address>();
+
+    let voter_2 = DefaultPrivateKey::generate()
+        .pub_key()
+        .to_address::<C::Address>();
+
+    let voter_3 = DefaultPrivateKey::generate()
+        .pub_key()
+        .to_address::<C::Address>();
 
     // Register voters
     {

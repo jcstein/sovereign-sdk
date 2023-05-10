@@ -10,7 +10,7 @@ mod types;
 use sov_state::WorkingSet;
 pub use types::Candidate;
 
-use sov_modules_api::Error;
+use sov_modules_api::{default_signature::DefaultPublicKey, Error};
 use sov_modules_macros::ModuleInfo;
 use types::Voter;
 
@@ -46,7 +46,7 @@ pub struct Election<C: sov_modules_api::Context> {
 impl<C: sov_modules_api::Context> sov_modules_api::Module for Election<C> {
     type Context = C;
 
-    type Config = ();
+    type Config = DefaultPublicKey;
 
     type CallMessage = call::CallMessage<C>;
 
@@ -54,10 +54,10 @@ impl<C: sov_modules_api::Context> sov_modules_api::Module for Election<C> {
 
     fn genesis(
         &self,
-        _config: &Self::Config,
+        config: &Self::Config,
         working_set: &mut WorkingSet<C::Storage>,
     ) -> Result<(), Error> {
-        Ok(self.init_module(working_set)?)
+        Ok(self.init_module(config, working_set)?)
     }
 
     fn call(
