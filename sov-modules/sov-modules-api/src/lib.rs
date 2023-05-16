@@ -29,8 +29,7 @@ use thiserror::Error;
 
 impl AsRef<[u8]> for Address {
     fn as_ref(&self) -> &[u8] {
-        //&self.addr
-        todo!()
+        &self.addr
     }
 }
 
@@ -47,7 +46,7 @@ impl AddressTrait for Address {}
     serde::Deserialize,
 )]
 pub struct Address {
-    addr: AddressBech32,
+    addr: Vec<u8>,
 }
 
 impl<'a> TryFrom<&'a [u8]> for Address {
@@ -55,19 +54,21 @@ impl<'a> TryFrom<&'a [u8]> for Address {
 
     fn try_from(addr: &'a [u8]) -> Result<Self, Self::Error> {
         let addr = AddressBech32::try_from(addr)?;
-        Ok(Self { addr })
+        Ok(Self {
+            addr: addr.to_bytes(),
+        })
     }
 }
 
 impl From<[u8; 32]> for Address {
     fn from(value: [u8; 32]) -> Self {
-        todo!()
+        Self::try_from(value.as_ref()).unwrap()
     }
 }
 
 impl Display for Address {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.addr)
+        write!(f, "{}", AddressBech32::from(self))
     }
 }
 

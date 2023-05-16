@@ -38,6 +38,13 @@ pub struct AddressBech32 {
     value: String,
 }
 
+impl AddressBech32 {
+    pub(crate) fn to_bytes(&self) -> Vec<u8> {
+        let (_, data) = bech32_to_vec(&self.value).unwrap();
+        data
+    }
+}
+
 impl TryFrom<&[u8]> for AddressBech32 {
     type Error = bech32::Error;
 
@@ -52,19 +59,15 @@ impl TryFrom<&[u8]> for AddressBech32 {
 
 impl From<&Address> for AddressBech32 {
     fn from(addr: &Address) -> Self {
-        addr.addr.clone()
+        let string = vec_to_bech32(&addr.addr, HRP).unwrap();
+        AddressBech32 { value: string }
     }
 }
 
 impl From<Address> for AddressBech32 {
     fn from(addr: Address) -> Self {
-        addr.addr
-    }
-}
-
-impl AsRef<&u8> for AddressBech32 {
-    fn as_ref(&self) -> &&u8 {
-        todo!()
+        let string = vec_to_bech32(&addr.addr, HRP).unwrap();
+        AddressBech32 { value: string }
     }
 }
 

@@ -15,6 +15,18 @@ fn test_account_bech32_display() {
 }
 
 #[test]
+fn test_address_conversion() {
+    let expected_addr: Vec<u8> = (1..=32).collect();
+    let addr = crate::Address::try_from(expected_addr.as_slice()).unwrap();
+
+    let addr_bytes: &[u8] = addr.as_ref();
+    assert_eq!(expected_addr, addr_bytes);
+
+    let addr_from_bytes = crate::Address::try_from(addr_bytes).unwrap();
+    assert_eq!(addr_from_bytes, addr);
+}
+
+#[test]
 fn test_pub_key_serialization() {
     let pub_key = DefaultPrivateKey::generate().pub_key();
     let serialized_pub_key = pub_key.try_to_vec().unwrap();
