@@ -17,11 +17,22 @@ pub fn bech32_to_vec(bech32_addr: &str) -> Result<(String, Vec<u8>), Error> {
 
 const HRP: &str = "sov";
 
-#[cfg_attr(feature = "native", derive(serde::Serialize, serde::Deserialize))]
-#[cfg_attr(feature = "native", serde(try_from = "String"), serde(into = "String"))]
+//#[cfg_attr(feature = "native", derive(serde::Serialize, serde::Deserialize))]
+//#[cfg_attr(feature = "native", serde(try_from = "String"), serde(into = "String"))]
 #[derive(
-    borsh::BorshDeserialize, borsh::BorshSerialize, Debug, PartialEq, Clone, Eq, Into, Display,
+    serde::Serialize,
+    serde::Deserialize,
+    borsh::BorshDeserialize,
+    borsh::BorshSerialize,
+    Debug,
+    PartialEq,
+    Clone,
+    Eq,
+    Into,
+    Display,
 )]
+#[serde(try_from = "String")]
+#[serde(into = "String")]
 #[display(fmt = "{}", "value")]
 pub struct AddressBech32 {
     value: String,
@@ -41,15 +52,19 @@ impl TryFrom<&[u8]> for AddressBech32 {
 
 impl From<&Address> for AddressBech32 {
     fn from(addr: &Address) -> Self {
-        let string = vec_to_bech32(&addr.addr, HRP).unwrap();
-        AddressBech32 { value: string }
+        addr.addr.clone()
     }
 }
 
 impl From<Address> for AddressBech32 {
     fn from(addr: Address) -> Self {
-        let string = vec_to_bech32(&addr.addr, HRP).unwrap();
-        AddressBech32 { value: string }
+        addr.addr
+    }
+}
+
+impl AsRef<&u8> for AddressBech32 {
+    fn as_ref(&self) -> &&u8 {
+        todo!()
     }
 }
 
