@@ -1,3 +1,4 @@
+use crate::traits::TransactionTrait;
 use crate::{da::BlobTransactionTrait, zk::traits::Zkvm};
 use borsh::{BorshDeserialize, BorshSerialize};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -148,6 +149,16 @@ pub struct EventKey(Vec<u8>);
 #[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize, Serialize, Deserialize)]
 pub struct EventValue(Vec<u8>);
 
+pub trait BlockBuilder {
+    // Mempool is internal
+
+    // Return something to client
+    fn accept_tx(&self, tx: Vec<u8>);
+
+    //
+    fn get_best_blob(&self) -> Vec<u8>;
+}
+
 /// A StateTransitionRunner (STR) is responsible for running the state transition function. For any particular function,
 /// you might have a few different STRs, each with different runtime configs. For example, you might have a STR which takes
 /// a path to a data directory as a runtime config, and another which takes a pre-built in-memory database.
@@ -163,12 +174,16 @@ pub struct EventValue(Vec<u8>);
 /// modes of execution.
 ///
 /// For example: might have `impl StateTransitionRunner<ProverConfig, Vm> for MyRunner` which takes a path to a data directory as a runtime config,
+///
 /// and a `impl StateTransitionRunner<ZkConfig, Vm> for MyRunner` which instead uses a state root as its runtime config.
+///
+// TODO: Move to node section
 pub trait StateTransitionRunner<T: StateTransitionConfig, Vm: Zkvm> {
     /// The parameters of the state transition function which are set at runtime. For example,
     /// the runtime config might contain path to a data directory.
     type RuntimeConfig;
     type Inner: StateTransitionFunction<Vm>;
+    type BlockBuilder: BlockBuilder; //
 
     // TODO: decide if `new` also requires <Self as StateTransitionFunction>::ChainParams as an argument
     /// Create a state transition runner
@@ -183,4 +198,8 @@ pub trait StateTransitionRunner<T: StateTransitionConfig, Vm: Zkvm> {
     // /// Report if the state transition function has been initialized.
     // /// If not, node implementations should respond by running `init_chain`
     // fn has_been_initialized(&self) -> bool;
+
+    fn get_next_block(&self);
+
+    fn accept_tx(&self);
 }
