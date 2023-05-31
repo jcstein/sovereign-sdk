@@ -15,9 +15,9 @@ use sov_modules_stf_template::AppTemplate;
 pub use sov_modules_stf_template::Batch;
 use sov_modules_stf_template::SequencerOutcome;
 use sov_modules_stf_template::TxEffect;
+use sov_rollup_interface::services::stf_runner::StateTransitionRunner;
 #[cfg(feature = "native")]
 use sov_rollup_interface::stf::ProverConfig;
-use sov_rollup_interface::stf::StateTransitionRunner;
 use sov_rollup_interface::stf::ZkConfig;
 use sov_rollup_interface::zk::traits::Zkvm;
 #[cfg(feature = "native")]
