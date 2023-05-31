@@ -1,7 +1,11 @@
 /// BlockBuilder trait is responsible for managing mempool and building batches.
 pub trait BatchBuilder {
-    // Return something to client
+    /// Accept a new transaction.
+    /// Can return error if transaction is invalid or mempool is full.
     fn accept_tx(&self, tx: Vec<u8>) -> anyhow::Result<()>;
 
-    fn get_best_blob(&self) -> anyhow::Result<Vec<u8>>;
+    /// Builds a new batch out of transactions in mempool.
+    fn get_next_blob(&self) -> anyhow::Result<Vec<u8>>;
+
+    // TODO: Eviction events?
 }
