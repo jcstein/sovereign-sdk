@@ -1,6 +1,5 @@
 #![feature(associated_type_defaults)]
 
-pub mod batch_builder;
 mod bech32;
 pub mod default_context;
 pub mod default_signature;
