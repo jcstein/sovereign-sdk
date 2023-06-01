@@ -1,3 +1,5 @@
+use crate::da::BlobTransactionTrait;
+use crate::services::batch_builder::BatchBuilder;
 use crate::stf::{StateTransitionConfig, StateTransitionFunction};
 use crate::zk::traits::Zkvm;
 
@@ -24,7 +26,6 @@ pub trait StateTransitionRunner<T: StateTransitionConfig, Vm: Zkvm> {
     /// the runtime config might contain path to a data directory.
     type RuntimeConfig;
     type Inner: StateTransitionFunction<Vm>;
-    // type BlockBuilder: BlockBuilder; //
 
     // TODO: decide if `new` also requires <Self as StateTransitionFunction>::ChainParams as an argument
     /// Create a state transition runner
@@ -39,8 +40,4 @@ pub trait StateTransitionRunner<T: StateTransitionConfig, Vm: Zkvm> {
     // /// Report if the state transition function has been initialized.
     // /// If not, node implementations should respond by running `init_chain`
     // fn has_been_initialized(&self) -> bool;
-
-    // fn get_next_block(&self);
-    //
-    // fn accept_tx(&self);
 }

@@ -1,3 +1,4 @@
+use anyhow::bail;
 use borsh::BorshDeserialize;
 use sov_modules_api::transaction::Transaction;
 use sov_modules_api::{Context, DispatchCall, PublicKey, Spec};
@@ -7,56 +8,51 @@ use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::io::Cursor;
 
-pub struct FiFoSimpleBatchBuilder {
-    mempool: RefCell<VecDeque<Vec<u8>>>,
-}
-
-impl FiFoSimpleBatchBuilder {
-    pub fn new() -> Self {
-        Self {
-            mempool: RefCell::new(VecDeque::new()),
-        }
-    }
-}
-
-///
-
-impl BatchBuilder for FiFoSimpleBatchBuilder {
-    fn accept_tx(&self, tx: Vec<u8>) -> anyhow::Result<()> {
-        let mut mempool = self.mempool.borrow_mut();
-        mempool.push_back(tx);
-        Ok(())
-    }
-
-    fn get_next_blob(&self) -> anyhow::Result<Vec<Vec<u8>>> {
-        todo!()
-    }
-}
+// pub struct FiFoSimpleBatchBuilder {
+//     mempool: RefCell<VecDeque<Vec<u8>>>,
+// }
+//
+// impl FiFoSimpleBatchBuilder {
+//     pub fn new() -> Self {
+//         Self {
+//             mempool: RefCell::new(VecDeque::new()),
+//         }
+//     }
+// }
+// ///
+//
+// impl BatchBuilder for FiFoSimpleBatchBuilder {
+//     fn accept_tx(&self, tx: Vec<u8>) -> anyhow::Result<()> {
+//         let mut mempool = self.mempool.borrow_mut();
+//         mempool.push_back(tx);
+//         Ok(())
+//     }
+//
+//     fn get_next_blob(&self) -> anyhow::Result<Vec<Vec<u8>>> {
+//         todo!()
+//     }
+// }
 
 /// Strict
 pub struct FiFoStrictBatchBuilder<R, C: Context> {
     mempool: RefCell<VecDeque<Vec<u8>>>,
     runtime: R, // TODO: ?? Particular runtime.
     batch_size: usize,
-    working_set: RefCell<WorkingSet<<C as Spec>::Storage>>,
+    working_set: Option<RefCell<WorkingSet<<C as Spec>::Storage>>>,
 }
 
 impl<R, C: Context> FiFoStrictBatchBuilder<R, C> {
-    pub fn new(
-        batch_size: usize,
-        runtime: R,
-        working_set: WorkingSet<<C as Spec>::Storage>,
-    ) -> Self {
+    pub fn new(batch_size: usize, runtime: R) -> Self {
         Self {
             mempool: RefCell::new(VecDeque::new()),
             batch_size,
             runtime,
-            working_set: RefCell::new(working_set),
+            working_set: None,
         }
     }
 
     pub fn reset_working_set(&mut self, working_set: WorkingSet<<C as Spec>::Storage>) {
-        self.working_set = RefCell::new(working_set);
+        self.working_set = Some(RefCell::new(working_set));
     }
 }
 
@@ -78,6 +74,12 @@ where
     /// Builds a new batch of valid transactions in order they were added to mempool
     /// Only transactions, which are dispatched successfully are included in the batch
     fn get_next_blob(&self) -> anyhow::Result<Vec<Vec<u8>>> {
+        let working_set = match self.working_set.as_ref() {
+            None => {
+                bail!("Cannot build batch before working set is initialized");
+            }
+            Some(working_set) => working_set,
+        };
         let mut txs = Vec::new();
         let mut dismissed: Vec<(Vec<u8>, anyhow::Error)> = Vec::new();
         let mut current_size = 0;
@@ -125,7 +127,7 @@ where
             {
                 let sender_address: C::Address = tx.pub_key().to_address();
                 let ctx = C::new(sender_address);
-                let mut working_set = self.working_set.borrow_mut();
+                let mut working_set = working_set.borrow_mut();
                 match self.runtime.dispatch_call(msg, &mut working_set, &ctx) {
                     Ok(_) => {
                         txs.push(raw_tx);
