@@ -1,5 +1,6 @@
 #![feature(associated_type_defaults)]
 
+pub mod batch_builder;
 mod bech32;
 pub mod default_context;
 pub mod default_signature;
@@ -13,6 +14,7 @@ mod serde_address;
 #[cfg(test)]
 mod tests;
 pub mod transaction;
+
 pub use crate::bech32::AddressBech32;
 use borsh::{BorshDeserialize, BorshSerialize};
 use core::fmt::{self, Debug, Display};
