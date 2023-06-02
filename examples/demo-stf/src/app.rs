@@ -27,10 +27,10 @@ use sov_state::ZkStorage;
 use sov_state::Storage;
 use std::cell::RefCell;
 
-pub struct DemoAppRunner<C: Context, Vm: Zkvm>(
-    pub DemoApp<C, Vm>,
-    RefCell<FiFoStrictBatchBuilder<Runtime<C>, C>>,
-);
+pub struct DemoAppRunner<C: Context, Vm: Zkvm> {
+    pub stf: DemoApp<C, Vm>,
+    batch_builder: RefCell<FiFoStrictBatchBuilder<Runtime<C>, C>>,
+}
 
 pub type ZkAppRunner<Vm> = DemoAppRunner<ZkDefaultContext, Vm>;
 
@@ -68,17 +68,19 @@ impl<Vm: Zkvm> StateTransitionRunner<ProverConfig, Vm> for DemoAppRunner<Default
         let storage = ProverStorage::with_config(runtime_config.storage)
             .expect("Failed to open prover storage");
         let app = AppTemplate::new(storage, runtime);
-        // TODO: add clone
         let batch_builder = FiFoStrictBatchBuilder::new(1024 * 100, Runtime::new());
-        Self(app, RefCell::new(batch_builder))
+        Self {
+            stf: app,
+            batch_builder: RefCell::new(batch_builder),
+        }
     }
 
     fn inner(&self) -> &Self::Inner {
-        &self.0
+        &self.stf
     }
 
     fn inner_mut(&mut self) -> &mut Self::Inner {
-        &mut self.0
+        &mut self.stf
     }
 }
 
@@ -92,15 +94,18 @@ impl<Vm: Zkvm> StateTransitionRunner<ZkConfig, Vm> for DemoAppRunner<ZkDefaultCo
         let app: AppTemplate<ZkDefaultContext, Runtime<ZkDefaultContext>, Vm> =
             AppTemplate::new(storage, runtime);
         let batch_builder = FiFoStrictBatchBuilder::new(1024 * 100, Runtime::new());
-        Self(app, RefCell::new(batch_builder))
+        Self {
+            stf: app,
+            batch_builder: RefCell::new(batch_builder),
+        }
     }
 
     fn inner(&self) -> &Self::Inner {
-        &self.0
+        &self.stf
     }
 
     fn inner_mut(&mut self) -> &mut Self::Inner {
-        &mut self.0
+        &mut self.stf
     }
 }
 
@@ -113,15 +118,21 @@ impl<Vm: Zkvm> RpcRunner for DemoAppRunner<DefaultContext, Vm> {
 }
 
 #[cfg(feature = "native")]
-impl<Vm: Zkvm> BatchBuilder<ProverConfig> for DemoAppRunner<DefaultContext, Vm> {
+impl<Vm: Zkvm> BatchBuilder for DemoAppRunner<DefaultContext, Vm> {
     fn accept_tx(&self, tx: Vec<u8>) -> anyhow::Result<()> {
-        self.1.borrow().accept_tx(tx)
+        self.batch_builder.borrow().accept_tx(tx)
     }
 
     fn get_next_blob(&self) -> anyhow::Result<Vec<Vec<u8>>> {
-        let mut batch_builder = self.1.borrow_mut();
+        let mut batch_builder = self.batch_builder.borrow_mut();
         let working_set = sov_state::WorkingSet::new(self.inner().current_storage.clone());
         batch_builder.reset_working_set(working_set);
         batch_builder.get_next_blob()
     }
 }
+
+// T: StateTransitionRunner: BatchBuilder
+// Q: State
+
+// cargo run -- --with-block-producer
+// cargo run -- --with-prover --with-producer
