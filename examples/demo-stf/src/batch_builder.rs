@@ -128,6 +128,9 @@ where
             }
         }
 
+        if txs.is_empty() {
+            bail!("No valid transactions are available");
+        }
         Ok(txs)
     }
 }
@@ -140,10 +143,12 @@ mod tests {
     use sov_modules_api::default_context::DefaultContext;
     use sov_modules_api::default_signature::private_key::DefaultPrivateKey;
     use sov_modules_api::transaction::Transaction;
-    use sov_modules_api::{Context, ModuleInfo};
+    use sov_modules_api::{Context, Genesis, ModuleInfo};
     use sov_modules_macros::{DispatchCall, Genesis, MessageCodec};
     use sov_rollup_interface::services::batch_builder::BatchBuilder;
+    use sov_state::{DefaultStorageSpec, ProverStorage, Storage};
     use sov_value_setter::call::CallMessage;
+    use sov_value_setter::ValueSetterConfig;
 
     type C = DefaultContext;
 
@@ -198,6 +203,23 @@ mod tests {
         FiFoStrictBatchBuilder::new(batch_size_bytes, runtime)
     }
 
+    // Returns storage after genesis and admin private key of valu setter
+    fn setup_runtime_and_storage() -> (ProverStorage<DefaultStorageSpec>, DefaultPrivateKey) {
+        let runtime = TestRuntime::<C>::new();
+        let storage = ProverStorage::<DefaultStorageSpec>::temporary();
+        let mut working_set = WorkingSet::new(storage.clone());
+        let admin_private_key = DefaultPrivateKey::generate();
+        let value_setter_config = ValueSetterConfig {
+            admin: admin_private_key.pub_key().to_address(),
+        };
+        let config = GenesisConfig::<C>::new(value_setter_config);
+        runtime.genesis(&config, &mut working_set).unwrap();
+        let (log, witness) = working_set.freeze();
+        storage.validate_and_commit(log, &witness).unwrap();
+
+        (storage, admin_private_key)
+    }
+
     mod accept_tx {
         use super::*;
         #[test]
@@ -224,8 +246,7 @@ mod tests {
 
         #[test]
         fn decline_tx_on_full_mempool() {
-            let runtime = TestRuntime::<C>::new();
-            let batch_builder = FiFoStrictBatchBuilder::<TestRuntime<C>, C>::new(512, runtime);
+            let batch_builder = build_test_batch_builder(10);
 
             for _ in 0..=MAX_TX_POOL_SIZE {
                 let tx = generate_random_valid_tx();
@@ -240,5 +261,36 @@ mod tests {
         }
     }
 
-    mod build_batch {}
+    mod build_batch {
+        use super::*;
+
+        #[test]
+        fn error_on_empty_mempool() {
+            let (storage, _) = setup_runtime_and_storage();
+            let working_set = WorkingSet::new(storage.clone());
+            let mut batch_builder = build_test_batch_builder(1024);
+            batch_builder.reset_working_set(working_set);
+            let build_result = batch_builder.get_next_blob();
+            assert!(build_result.is_err());
+            assert_eq!(
+                "No valid transactions are available",
+                build_result.unwrap_err().to_string()
+            );
+        }
+
+        #[test]
+        fn error_on_non_initialized_working_set() {
+            let batch_builder = build_test_batch_builder(1024);
+            let build_result = batch_builder.get_next_blob();
+            assert!(build_result.is_err());
+            assert_eq!(
+                "Cannot build batch before working set is initialized",
+                build_result.unwrap_err().to_string()
+            );
+        }
+
+        #[test]
+        #[ignore = "TBD"]
+        fn builds_batch_skipping_invalid_txs() {}
+    }
 }
