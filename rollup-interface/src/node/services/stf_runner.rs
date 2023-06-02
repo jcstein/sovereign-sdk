@@ -1,4 +1,3 @@
-use crate::da::BlobTransactionTrait;
 use crate::services::batch_builder::BatchBuilder;
 use crate::stf::{StateTransitionConfig, StateTransitionFunction};
 use crate::zk::traits::Zkvm;
@@ -21,7 +20,7 @@ use crate::zk::traits::Zkvm;
 ///
 /// and a `impl StateTransitionRunner<ZkConfig, Vm> for MyRunner` which instead uses a state root as its runtime config.
 ///
-pub trait StateTransitionRunner<T: StateTransitionConfig, Vm: Zkvm> {
+pub trait StateTransitionRunner<T: StateTransitionConfig, Vm: Zkvm>: BatchBuilder<T> {
     /// The parameters of the state transition function which are set at runtime. For example,
     /// the runtime config might contain path to a data directory.
     type RuntimeConfig;

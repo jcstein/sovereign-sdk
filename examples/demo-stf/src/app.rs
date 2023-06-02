@@ -23,7 +23,8 @@ use sov_rollup_interface::zk::traits::Zkvm;
 #[cfg(feature = "native")]
 use sov_state::ProverStorage;
 use sov_state::ZkStorage;
-use sov_state::{Storage, WorkingSet};
+
+use sov_state::Storage;
 use std::cell::RefCell;
 
 pub struct DemoAppRunner<C: Context, Vm: Zkvm>(
@@ -43,6 +44,7 @@ use sov_value_setter::query::{ValueSetterRpcImpl, ValueSetterRpcServer};
 use crate::batch_builder::FiFoStrictBatchBuilder;
 #[cfg(feature = "native")]
 use sov_modules_macros::expose_rpc;
+#[cfg(feature = "native")]
 use sov_rollup_interface::services::batch_builder::BatchBuilder;
 
 #[cfg(feature = "native")]
@@ -66,6 +68,7 @@ impl<Vm: Zkvm> StateTransitionRunner<ProverConfig, Vm> for DemoAppRunner<Default
         let storage = ProverStorage::with_config(runtime_config.storage)
             .expect("Failed to open prover storage");
         let app = AppTemplate::new(storage, runtime);
+        // TODO: add clone
         let batch_builder = FiFoStrictBatchBuilder::new(1024 * 100, Runtime::new());
         Self(app, RefCell::new(batch_builder))
     }
@@ -110,14 +113,14 @@ impl<Vm: Zkvm> RpcRunner for DemoAppRunner<DefaultContext, Vm> {
 }
 
 #[cfg(feature = "native")]
-impl<Vm: Zkvm> BatchBuilder for DemoAppRunner<DefaultContext, Vm> {
+impl<Vm: Zkvm> BatchBuilder<ProverConfig> for DemoAppRunner<DefaultContext, Vm> {
     fn accept_tx(&self, tx: Vec<u8>) -> anyhow::Result<()> {
         self.1.borrow().accept_tx(tx)
     }
 
     fn get_next_blob(&self) -> anyhow::Result<Vec<Vec<u8>>> {
         let mut batch_builder = self.1.borrow_mut();
-        let working_set = WorkingSet::new(self.inner().current_storage.clone());
+        let working_set = sov_state::WorkingSet::new(self.inner().current_storage.clone());
         batch_builder.reset_working_set(working_set);
         batch_builder.get_next_blob()
     }

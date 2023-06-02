@@ -3,6 +3,7 @@ use borsh::BorshDeserialize;
 use sov_modules_api::transaction::Transaction;
 use sov_modules_api::{Context, DispatchCall, PublicKey, Spec};
 use sov_rollup_interface::services::batch_builder::BatchBuilder;
+use sov_rollup_interface::stf::ProverConfig;
 use sov_state::WorkingSet;
 use std::cell::RefCell;
 use std::collections::VecDeque;
@@ -33,10 +34,11 @@ use std::io::Cursor;
 //     }
 // }
 
-/// Strict
+/// BatchBuilder that creates batch of transaction in the order they were submitted
+/// Only transaction that were successfully dispatched are included.
 pub struct FiFoStrictBatchBuilder<R, C: Context> {
     mempool: RefCell<VecDeque<Vec<u8>>>,
-    runtime: R, // TODO: ?? Particular runtime.
+    runtime: R,
     batch_size: usize,
     working_set: Option<RefCell<WorkingSet<<C as Spec>::Storage>>>,
 }
@@ -56,7 +58,7 @@ impl<R, C: Context> FiFoStrictBatchBuilder<R, C> {
     }
 }
 
-impl<R, C: Context> BatchBuilder for FiFoStrictBatchBuilder<R, C>
+impl<R, C: Context> BatchBuilder<ProverConfig> for FiFoStrictBatchBuilder<R, C>
 where
     R: DispatchCall<Context = C>,
 {
@@ -111,6 +113,11 @@ where
                 continue;
             }
 
+            // 1. tx is not some garbage
+            // 2. tx is signed correctly, not forged
+            // ----
+            //
+
             // Decode
             // tx.estimate_fees();
             let msg = match R::decode_call(tx.runtime_msg()) {
@@ -128,6 +135,8 @@ where
                 let sender_address: C::Address = tx.pub_key().to_address();
                 let ctx = C::new(sender_address);
                 let mut working_set = working_set.borrow_mut();
+
+                //
                 match self.runtime.dispatch_call(msg, &mut working_set, &ctx) {
                     Ok(_) => {
                         txs.push(raw_tx);
